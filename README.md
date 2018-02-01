@@ -1,6 +1,11 @@
-## React Tether
+# React Tether
 
-[![Dependency Status](https://david-dm.org/souporserious/react-tether.svg)](https://david-dm.org/souporserious/react-tether)
+[![Build Status](https://travis-ci.org/danreeves/react-tether.svg?branch=browser-tests)](https://travis-ci.org/danreeves/react-tether) [![Dependency Status](https://david-dm.org/danreeves/react-tether.svg)](https://david-dm.org/danreeves/react-tether)
+
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/react-tether.svg)](https://saucelabs.com/u/react-tether)
+> Cross-browser Testing Platform and Open Source <3 Provided by [Sauce Labs](https://saucelabs.com/).
+
+---
 
 React wrapper around [Tether](https://github.com/hubspot/tether) from Hub Spot.
 
@@ -72,11 +77,31 @@ Where in the DOM the Tether element is appended. Passes in any valid selector to
 
 Any valid [Tether options](http://tether.io/#options).
 
+## Imperative API
+
+The following methods are exposed on the component instance:
+
+- `getTetherInstance(): Tether`
+- `disable(): void`
+- `enable(): void`
+- `on(event: string, handler: function, ctx: any): void`
+- `once(event: string, handler: function, ctx: any): void`
+- `off(event: string, handler: function): void`
+- `position(): void`
+
+#### Example usage:
+```javascript
+<TetherComponent ref={tether => this.tether = tether}>
+  <Target/>
+  <Element onResize={() => this.tether && this.tether.position()}
+</TetherComponent>
+```
+
 ## Run Example
 
 clone repo
 
-`git clone git@github.com:souporserious/react-tether.git`
+`git clone git@github.com:danreeves/react-tether.git`
 
 move into folder
 
