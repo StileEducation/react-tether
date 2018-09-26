@@ -1,57 +1,57 @@
-var path = require('path');
-var webpack = require('webpack');
-var TARGET = process.env.TARGET || null;
+const path = require('path');
+const webpack = require('webpack');
+const pkg = require('./package.json');
 
-var config = {
-  entry: {
+const banner = `
+${pkg.name} ${pkg.version}
+${pkg.homepage}
+Copyright (c) ${new Date().getFullYear()} ${pkg.name} authors
+`.trim();
+
+const externals = {
+  react: {
+    root: 'React',
+    commonjs2: 'react',
+    commonjs: 'react',
+    amd: 'react',
   },
-  output: {
-    path: path.join(__dirname, 'example'),
-    filename: 'bundle.js'
+  'react-dom': {
+    root: 'ReactDOM',
+    commonjs2: 'react-dom',
+    commonjs: 'react-dom',
+    amd: 'react-dom',
   },
-  module: {
-    loaders: [
-      { test: /\.(js|jsx)/, exclude: /node_modules/, loader: 'babel-loader' },
-      { test: /\.(css|scss)/, loader: 'style!css!postcss!sass?sourceMap' }
-    ]
+  tether: {
+    root: 'Tether',
+    commonjs2: 'tether',
+    commonjs: 'tether',
+    amd: 'tether',
   },
-  resolve: {
-    extensions: ['', '.js', '.jsx']
-  },
-  plugins: [],
-  devServer: {
-    contentBase: './example',
-    inline: true
-  }
 };
 
-if (TARGET === 'minify') {
-  config.entry.index = path.join(__dirname, 'example/index.jsx');
+const config = {
+  entry: './src/react-tether.js',
+  devtool: 'source-map',
+  output: {
+    path: path.join(__dirname, 'dist'),
+    filename: 'react-tether.min.js',
+    library: 'TetherComponent',
+    libraryTarget: 'umd',
+  },
+  module: {
+    rules: [{ test: /\.(js|jsx)/, loader: 'babel-loader' }],
+  },
+  plugins: [new webpack.BannerPlugin(banner)],
+  resolve: {
+    extensions: ['.js', '.jsx'],
+  },
+  externals,
+};
 
-  config.plugins.push(new webpack.DefinePlugin({
-    'process.env': {
-      NODE_ENV: JSON.stringify('production')
-    }
-  }))
+const nonMiniConfig = {
+  ...config,
+};
+nonMiniConfig.output = { ...config.output, filename: 'react-tether.js' };
+nonMiniConfig.optimization = { minimize: false };
 
-  config.plugins.push(new webpack.optimize.UglifyJsPlugin({
-      compress: {
-        screw_ie8: true,
-        warnings: false
-      },
-      mangle: {
-        screw_ie8: true
-      },
-      output: {
-        comments: false,
-        screw_ie8: true
-      }
-    }));
-} else {
-  config.entry.index = [
-    'webpack/hot/dev-server',
-    path.join(__dirname, 'example/index.jsx')
-  ];
-}
-
-module.exports = config;
+module.exports = [config, nonMiniConfig];

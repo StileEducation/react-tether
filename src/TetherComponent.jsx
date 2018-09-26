@@ -1,27 +1,34 @@
-import React, { Component, Children } from 'react'
-import PropTypes from 'prop-types'
-import ReactDOM from 'react-dom'
-import Tether from 'tether'
+import { Component, Children } from 'react';
+import PropTypes from 'prop-types';
+import ReactDOM from 'react-dom';
+import Tether from 'tether';
 
 if (!Tether) {
-  console.error('It looks like Tether has not been included. Please load this dependency first https://github.com/HubSpot/tether')
+  console.error(
+    'It looks like Tether has not been included. Please load this dependency first https://github.com/HubSpot/tether'
+  );
 }
+
+const hasCreatePortal = ReactDOM.createPortal !== undefined;
 
 const renderElementToPropTypes = [
   PropTypes.string,
   PropTypes.shape({
-    appendChild: PropTypes.func.isRequired
-  })
-]
+    appendChild: PropTypes.func.isRequired,
+  }),
+];
 
 const childrenPropType = ({ children }, propName, componentName) => {
-  const childCount = Children.count(children)
+  const childCount = Children.count(children);
   if (childCount <= 0) {
-    return new Error(`${componentName} expects at least one child to use as the target element.`)
-  } else if (childCount > 2) {
-    return new Error(`Only a max of two children allowed in ${componentName}.`)
+    return new Error(
+      `${componentName} expects at least one child to use as the target element.`
+    );
   }
-}
+  if (childCount > 2) {
+    return new Error(`Only a max of two children allowed in ${componentName}.`);
+  }
+};
 
 const attachmentPositions = [
   'auto auto',
@@ -33,8 +40,8 @@ const attachmentPositions = [
   'middle right',
   'bottom left',
   'bottom center',
-  'bottom right'
-]
+  'bottom right',
+];
 
 class TetherComponent extends Component {
   static propTypes = {
@@ -55,42 +62,61 @@ class TetherComponent extends Component {
     style: PropTypes.object,
     onUpdate: PropTypes.func,
     onRepositioned: PropTypes.func,
-    children: childrenPropType
-  }
+    children: childrenPropType,
+  };
 
   static defaultProps = {
     renderElementTag: 'div',
-    renderElementTo: null
+    renderElementTo: null,
+  };
+
+  _targetNode = null;
+
+  _elementParentNode = null;
+
+  _tether = null;
+
+  constructor(props) {
+    super(props);
+    const elementComponent = Children.toArray(props.children)[1];
+
+    if (elementComponent) {
+      this._createContainer();
+    }
   }
 
-  _targetNode = null
-  _elementParentNode = null
-  _tether = false
+  componentWillUpdate({ children }) {
+    const elementComponent = Children.toArray(children)[1];
+
+    if (elementComponent) {
+      this._createContainer();
+    }
+  }
 
   componentDidMount() {
-    this._targetNode = ReactDOM.findDOMNode(this)
-    this._update()
+    this._targetNode = ReactDOM.findDOMNode(this);
+    this._update();
   }
 
-  componentDidUpdate(prevProps) {
-    this._targetNode = ReactDOM.findDOMNode(this)
-    this._update()
+  componentDidUpdate() {
+    this._targetNode = ReactDOM.findDOMNode(this);
+    this._update();
   }
 
   componentWillUnmount() {
-    this._destroy()
+    this._destroy();
   }
 
   getTetherInstance() {
-    return this._tether
+    return this._tether;
   }
 
   disable() {
-    this._tether.disable()
+    this._tether.disable();
   }
 
   enable() {
-    this._tether.enable()
+    this._tether.enable();
   }
 
   on(event, handler, ctx) {
@@ -102,114 +128,147 @@ class TetherComponent extends Component {
   }
 
   off(event, handler) {
-    this._tether.off(event, handler)
+    this._tether.off(event, handler);
   }
 
   position() {
-    this._tether.position()
+    this._tether.position();
   }
 
   _registerEventListeners() {
     this.on('update', () => {
-      return this.props.onUpdate && this.props.onUpdate.apply(this, arguments)
-    })
+      return this.props.onUpdate && this.props.onUpdate.apply(this, arguments);
+    });
 
     this.on('repositioned', () => {
-      return this.props.onRepositioned && this.props.onRepositioned.apply(this, arguments)
-    })
+      return (
+        this.props.onRepositioned &&
+        this.props.onRepositioned.apply(this, arguments)
+      );
+    });
   }
 
   get _renderNode() {
-    const { renderElementTo } = this.props
+    const { renderElementTo } = this.props;
     if (typeof renderElementTo === 'string') {
-      return document.querySelector(renderElementTo)
-    } else {
-      return renderElementTo || document.body
+      return document.querySelector(renderElementTo);
     }
+    return renderElementTo || document.body;
   }
 
   _destroy() {
     if (this._elementParentNode) {
-      ReactDOM.unmountComponentAtNode(this._elementParentNode)
-      this._elementParentNode.parentNode.removeChild(this._elementParentNode)
+      if (!hasCreatePortal) {
+        ReactDOM.unmountComponentAtNode(this._elementParentNode);
+      }
+      this._elementParentNode.parentNode.removeChild(this._elementParentNode);
     }
 
     if (this._tether) {
-      this._tether.destroy()
+      this._tether.destroy();
     }
 
-    this._elementParentNode = null
-    this._tether = null
+    this._elementParentNode = null;
+    this._tether = null;
+  }
+
+  _createContainer() {
+    const { renderElementTag } = this.props;
+
+    // Create element node container if it hasn't been yet
+    if (!this._elementParentNode) {
+      // Create a node that we can stick our content Component in
+      this._elementParentNode = document.createElement(renderElementTag);
+
+      // Append node to the render node
+      this._renderNode.appendChild(this._elementParentNode);
+    }
   }
 
   _update() {
-    const { children, renderElementTag } = this.props
-    const elementComponent = Children.toArray(children)[1]
+    const { children } = this.props;
+    const elementComponent = Children.toArray(children)[1];
 
-    // if no element component provided, bail out
+    // If no element component provided, bail out
     if (!elementComponent) {
-      // destroy Tether element if it has been created
+      // Destroy Tether element if it has been created
       if (this._tether) {
-        this._destroy()
+        this._destroy();
       }
-      return
+      return;
     }
 
-    // create element node container if it hasn't been yet
-    if (!this._elementParentNode) {
-      // create a node that we can stick our content Component in
-      this._elementParentNode = document.createElement(renderElementTag)
-
-      // append node to the render node
-      this._renderNode.appendChild(this._elementParentNode)
-    }
-
-    // render element component into the DOM
-    ReactDOM.unstable_renderSubtreeIntoContainer(
-      this, elementComponent, this._elementParentNode, () => {
-        // if we're not destroyed, update Tether once the subtree has finished rendering
-        if (this._elementParentNode) {
-          this._updateTether()
+    if (hasCreatePortal) {
+      this._updateTether();
+    } else {
+      // Render element component into the DOM
+      ReactDOM.unstable_renderSubtreeIntoContainer(
+        this,
+        elementComponent,
+        this._elementParentNode,
+        () => {
+          // If we're not destroyed, update Tether once the subtree has finished rendering
+          if (this._elementParentNode) {
+            this._updateTether();
+          }
         }
-      }
-    )
+      );
+    }
   }
 
   _updateTether() {
-    const { children, renderElementTag, renderElementTo, id, className, style, ...options } = this.props
+    const {
+      children,
+      renderElementTag,
+      renderElementTo,
+      id,
+      className,
+      style,
+      ...options
+    } = this.props;
     const tetherOptions = {
       target: this._targetNode,
       element: this._elementParentNode,
-      ...options
-    }
+      ...options,
+    };
 
     if (id) {
-      this._elementParentNode.id = id
+      this._elementParentNode.id = id;
     }
 
     if (className) {
-      this._elementParentNode.className = className
+      this._elementParentNode.className = className;
     }
 
     if (style) {
       Object.keys(style).forEach(key => {
-        this._elementParentNode.style[key] = style[key]
-      })
+        this._elementParentNode.style[key] = style[key];
+      });
     }
 
-    if (!this._tether) {
-      this._tether = new Tether(tetherOptions)
-      this._registerEventListeners()
+    if (this._tether) {
+      this._tether.setOptions(tetherOptions);
     } else {
-      this._tether.setOptions(tetherOptions)
+      this._tether = new Tether(tetherOptions);
+      this._registerEventListeners();
     }
 
-    this._tether.position()
+    this._tether.position();
   }
 
   render() {
-    return Children.toArray(this.props.children)[0]
+    const { children } = this.props;
+    const elementComponent = Children.toArray(children)[1];
+
+    if (!hasCreatePortal || !elementComponent) {
+      return Children.toArray(children)[0];
+    }
+
+    return [
+      Children.toArray(children)[0],
+      ReactDOM.createPortal(elementComponent, this._elementParentNode),
+    ];
   }
 }
 
-export default TetherComponent
+export default TetherComponent;
